@@ -6,6 +6,7 @@ import os, os.path
 
 from urllib import request
 import re
+import subprocess
 
 __version__ = '0.1.0'
 
@@ -45,12 +46,21 @@ def html2mk(text):
 
     return text
 
+def go_workspace_tune(pwd):
+    return subprocess.run(
+        'go mod init github.com/Wiston999/adventofcode/{}'.format(pwd),
+        shell=True,
+        cwd='./{}'.format(pwd),
+    ).returncode == 0
+
 def main(argv=None):
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('-v', '--version', action='version',
             version='%%(prog)s v%s' % __version__)
     arg_parser.add_argument('-y', '--year', type=int, default=2021,
             help='Year of advent of code')
+    arg_parser.add_argument('-m', '--language', choices=['python', 'go'], default='python',
+            help='Language skel to be used')
     arg_parser.add_argument('day', type=int,
             help='Day to be fetched and prepared')
     arg_parser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout,
@@ -66,25 +76,50 @@ def main(argv=None):
     logger.debug('Year: %s', args.year)
     logger.debug('Output file: %s', args.output.name)
 
+    langs = {
+        'python': {
+            'skel': 'py-skel.py',
+            'extension': 'py',
+            'workspace_tune': lambda x: True
+        },
+        'go': {
+            'skel': 'go-skel.go',
+            'extension': 'go',
+            'workspace_tune': go_workspace_tune
+        },
+    }
+
     print ("Creating folder for day:", args.day, file=args.output)
     try:
-        os.mkdir('{}/day{}'.format(args.year, args.day))
+        os.mkdir('{}/day{:02d}'.format(args.year, args.day))
     except FileExistsError:
-        logger.warning('Folder %s/day%s already exists, ignoring', args.year, args.day)
+        logger.warning('Folder %s/day%02d already exists, ignoring', args.year, args.day)
 
     print ("Fetching README for day", args.day, file=args.output)
     readme = fetch_readme(args.day, args.year)
 
-    open(os.path.join(str(args.year), 'day{}'.format(args.day), 'README.md'), 'w').write(html2mk(readme))
+    open(os.path.join(str(args.year), 'day{:02d}'.format(args.day), 'README.md'), 'w').write(html2mk(readme))
 
-    print ("Copying python skeletons", file=args.output)
+    print ("Copying {} skeletons".format(args.language), file=args.output)
 
     for f in '12':
-        f = os.path.join(str(args.year), 'day{}'.format(args.day), 'day{}-{}.py'.format(args.day, f))
+        f = os.path.join(
+            str(args.year),
+            'day{:02d}'.format(args.day),
+            'day{:02d}-{}.{}'.format(args.day, f, langs[args.language]['extension'])
+        )
         if not os.path.exists(f):
-            cp('py-skel.py', f)
+            cp(langs[args.language]['skel'], f)
         else:
             logger.warning('%s already exists', f)
+
+    setup_success = langs[args.language]['workspace_tune'](os.path.join(
+        str(args.year),
+        'day{:02d}'.format(args.day)
+    ))
+
+    if not setup_success:
+        logger.warning('Failed setting up workspace')
 
     print ("Finished setting up day, visit https://adventofcode.com/{}/day/{}/input to get your input".format(
         args.year,
