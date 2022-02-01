@@ -47,11 +47,20 @@ def html2mk(text):
     return text
 
 def go_workspace_tune(pwd):
-    return subprocess.run(
+    actions = [
         'go mod init github.com/Wiston999/adventofcode/{}'.format(pwd),
-        shell=True,
-        cwd='./{}'.format(pwd),
-    ).returncode == 0
+        'go get github.com/sirupsen/logrus',
+        'go get github.com/urfave/cli/v2',
+    ]
+
+    rcs = []
+    for action in actions:
+        rc = subprocess.run(action, shell=True, cwd='./{}'.format(pwd)).returncode
+        if rc != 0:
+            logger.warning('Action "%s" failed executing', action)
+        rcs.append(rc == 0)
+
+    return all(rcs)
 
 def main(argv=None):
     arg_parser = argparse.ArgumentParser()
