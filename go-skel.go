@@ -10,6 +10,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+type Problem struct {
+}
+
 func setLogLevel(level string) {
 	switch strings.ToLower(level) {
 	case "debug":
@@ -41,24 +44,28 @@ func echo(msg, f string) {
 	fmt.Fprintf(file, msg)
 }
 
-func parseInput(input string) (data interface{}, err error) {
-	f, err := os.Open(input)
+func parseInput(input string) (data Problem, err error) {
+	byteData, err := os.ReadFile(input)
 	if err != nil {
 		log.Error(fmt.Sprintf("Error opening file %s for reading input: %v", input, err))
 		return
 	}
-	var tmpData []byte
-	f.Read(tmpData)
+	strData := string(byteData)
+	for i, l := range strings.Split(strings.TrimSpace(strData), "\n") {
+		log.Debug(fmt.Sprintf("Parsing line %03d: %s", i, l))
+	}
 	return
 }
 
 func solution(context *cli.Context) (result int) {
 	var input = context.String("input")
-	_, err := parseInput(input)
+	problem, err := parseInput(input)
 	if err != nil {
 		log.Error(fmt.Sprintf("Something went wrong while reading input file: %v", err))
 		return
 	}
+
+	log.Debug(fmt.Sprintf("Parsed problem %#v", problem))
 
 	return
 }
