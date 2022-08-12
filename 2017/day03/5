@@ -1,0 +1,34 @@
+# Vim 8.0 generó este archivo "viminfo".
+# Puede editarlo, ¡sólo si tiene cuidado!
+
+# Viminfo version
+|1,4
+
+# Valor de 'encoding' cuando se escribió este archivo
+*encoding=utf-8
+
+
+# hlsearch on (H) or off (h):
+~h
+# Historia de Línea de órdenes (de lo más nuevo a lo más antiguo):
+:q
+|2,0,1660340175,,"q"
+
+# Historia de Cadena de búsqueda (de lo más nuevo a lo más antiguo):
+
+# Historia de Expresión (de lo más nuevo a lo más antiguo):
+
+# Historia de Línea de entrada (de lo más nuevo a lo más antiguo):
+
+# Historia de Debug Line (de lo más nuevo a lo más antiguo):
+
+# Registros:
+
+# Lista de búfers:
+%~/adventofcode/2017/day03/day03-2.go	1	0
+
+# Historia de las marcas en los archivos (de la más reciente a la más antigua):
+
+> ~/adventofcode/2017/day03/day03-2.go
+	*	1660340173	0
+	"	1	0
