@@ -11,6 +11,31 @@ import (
 )
 
 type Problem struct {
+	Pos0, Pos1            int
+	Size, Current, Offset int
+}
+
+func NewProblem(size, offset int) (p *Problem) {
+	p = new(Problem)
+	p.Pos1 = 0
+	p.Size = 0
+	p.Offset = offset
+	return
+}
+
+func (p *Problem) Insert(v int) {
+	if p.Size == 0 {
+		p.Current = 0
+		p.Size = 1
+		return
+	}
+	p.Current = (p.Current + p.Offset) % p.Size
+	p.Current++
+	// 0 doesn't move, just track number that is at position 1
+	if p.Current == 1 {
+		p.Pos1 = v
+	}
+	p.Size++
 }
 
 func setLogLevel(level string) {
@@ -44,29 +69,22 @@ func echo(msg, f string) {
 	fmt.Fprintf(file, msg)
 }
 
-func parseInput(input string) (data Problem, err error) {
-	byteData, err := os.ReadFile(input)
-	if err != nil {
-		log.Error(fmt.Sprintf("Error opening file %s for reading input: %v", input, err))
-		return
-	}
-	strData := string(byteData)
-	for i, l := range strings.Split(strings.TrimSpace(strData), "\n") {
-		log.Debug(fmt.Sprintf("Parsing line %03d: %s", i, l))
-	}
-	return
-}
-
 func solution(context *cli.Context) (result int) {
-	var input = context.String("input")
-	problem, err := parseInput(input)
-	if err != nil {
-		log.Error(fmt.Sprintf("Something went wrong while reading input file: %v", err))
-		return
-	}
+	var input = context.Int("input")
+	var maxSize = context.Int("max")
 
+	problem := NewProblem(maxSize, input)
 	log.Debug(fmt.Sprintf("Parsed problem %#v", problem))
 
+	progress := maxSize / 20
+	for i := 0; i < maxSize; i++ {
+		problem.Insert(i)
+		if i%progress == 0 {
+			log.Info(fmt.Sprintf("Processed %d out of %d (%02.2f %%)", i, maxSize, float64(i*100.0/(maxSize*1.0))))
+		}
+	}
+
+	result = problem.Pos1
 	return
 }
 
@@ -81,11 +99,17 @@ func main() {
 				Value:   "info",
 				Usage:   "Log level output",
 			},
-			&cli.StringFlag{
+			&cli.IntFlag{
+				Name:    "max",
+				Aliases: []string{"m"},
+				Value:   50000000,
+				Usage:   "Max iterations",
+			},
+			&cli.IntFlag{
 				Name:    "input",
 				Aliases: []string{"i"},
-				Value:   "input.txt",
-				Usage:   "Input file path",
+				Value:   348,
+				Usage:   "Input value",
 			},
 			&cli.StringFlag{
 				Name:    "output",
