@@ -66,7 +66,7 @@ def main(argv=None):
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('-v', '--version', action='version',
             version='%%(prog)s v%s' % __version__)
-    arg_parser.add_argument('-y', '--year', type=int, default=2021,
+    arg_parser.add_argument('-y', '--year', type=int, default=2022,
             help='Year of advent of code')
     arg_parser.add_argument('-m', '--language', choices=['python', 'go'], default='python',
             help='Language skel to be used')
