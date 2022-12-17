@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -26,6 +28,11 @@ func setLogLevel(level string) {
 	default:
 		log.Fatal(fmt.Sprintf("Unkown log level %s", level))
 	}
+}
+
+func atoiSafe(a string) (i int) {
+	i, _ = strconv.Atoi(a)
+	return
 }
 
 func echo(msg, f string) {
@@ -100,7 +107,8 @@ func main() {
 			log.Debug(fmt.Sprintf("Input file name:  %s", c.String("input")))
 			log.Debug(fmt.Sprintf("Output file name: %s", c.String("output")))
 			log.Debug(fmt.Sprintf("Log level:        %s", c.String("loglevel")))
-			echo(fmt.Sprintf("Solution is %v", solution(c)), c.String("output"))
+			start := time.Now()
+			echo(fmt.Sprintf("Solution is %v in %s", solution(c), time.Since(start)), c.String("output"))
 			return nil
 		},
 	}
