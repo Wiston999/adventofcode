@@ -13,6 +13,10 @@ __version__ = '0.1.0'
 logging.basicConfig()
 logger = logging.getLogger(__file__)
 
+GO_RUN_SH='''#!/bin/bash
+go run day{:02d}.go utils.go $@
+'''
+
 def fetch_readme(day, year):
     url = 'https://adventofcode.com/{}/day/{}'.format(year, day)
     logger.debug('Fetching %s', url)
@@ -51,6 +55,9 @@ def go_workspace_tune(pwd):
         'go mod init github.com/Wiston999/adventofcode/{}'.format(pwd),
         'go get github.com/sirupsen/logrus',
         'go get github.com/urfave/cli/v2',
+        'go get github.com/oleiade/lane/v2',
+        'go mod tidy',
+        'chmod a+x run.sh',
     ]
 
     rcs = []
@@ -59,7 +66,6 @@ def go_workspace_tune(pwd):
         if rc != 0:
             logger.warning('Action "%s" failed executing', action)
         rcs.append(rc == 0)
-
     return all(rcs)
 
 def main(argv=None):
@@ -109,16 +115,54 @@ def main(argv=None):
 
     open(os.path.join(str(args.year), 'day{:02d}'.format(args.day), 'README.md'), 'w').write(html2mk(readme))
 
+
+    print ("Creating input files", file=args.output)
+    for f in ['input.txt', 'input.test.1.txt']:
+        open(os.path.join(str(args.year), 'day{:02d}'.format(args.day), f), mode='a').close()
+
     print ("Copying {} skeletons".format(args.language), file=args.output)
 
-    for f in '12':
+    if args.language == 'python':
+        for f in '12':
+            f = os.path.join(
+                str(args.year),
+                'day{:02d}'.format(args.day),
+                'day{:02d}-{}.{}'.format(args.day, f, langs[args.language]['extension'])
+            )
+            if not os.path.exists(f):
+                cp(langs[args.language]['skel'], f)
+            else:
+                logger.warning('%s already exists', f)
+    elif args.language == 'go':
         f = os.path.join(
             str(args.year),
             'day{:02d}'.format(args.day),
-            'day{:02d}-{}.{}'.format(args.day, f, langs[args.language]['extension'])
+            'day{:02d}.{}'.format(args.day, langs[args.language]['extension'])
         )
         if not os.path.exists(f):
             cp(langs[args.language]['skel'], f)
+        else:
+            logger.warning('%s already exists', f)
+
+        f = os.path.join(
+            str(args.year),
+            'day{:02d}'.format(args.day),
+            'utils.go',
+        )
+
+        if not os.path.exists(f):
+            cp('utils.go', f)
+        else:
+            logger.warning('%s already exists', f)
+
+        f = os.path.join(
+            str(args.year),
+            'day{:02d}'.format(args.day),
+            'run.sh',
+        )
+
+        if not os.path.exists(f):
+            open(f, 'w').write(GO_RUN_SH.format(args.day))
         else:
             logger.warning('%s already exists', f)
 
