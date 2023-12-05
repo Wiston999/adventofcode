@@ -44,6 +44,7 @@ func main() {
 			if err != nil {
 				return err
 			}
+			log.Debug(fmt.Sprintf("Parsed problem: %#v", p))
 			start := time.Now()
 			echo(fmt.Sprintf("Part 1 solution is %v in %s\n", p.Part1(), time.Since(start)), c.String("output"))
 			start = time.Now()

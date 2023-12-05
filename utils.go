@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -127,4 +128,12 @@ func (p *PathFinder) Search() (path []State, score float64) {
 		}
 	}
 	return
+}
+
+type Coord struct {
+	X, Y int
+}
+
+func (c *Coord) Manhattan(oc Coord) float64{
+	return math.Abs(float64(oc.X - c.X)) + math.Abs(float64(oc.Y - c.Y))
 }
