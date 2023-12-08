@@ -33,6 +33,14 @@ func main() {
 				Value:   "-",
 				Usage:   "Output file path, use - for stdout",
 			},
+			&cli.BoolFlag{
+				Name:  "disable1",
+				Usage: "Disable part 1 execution",
+			},
+			&cli.BoolFlag{
+				Name:  "disable2",
+				Usage: "Disable part 1 execution",
+			},
 		},
 		Action: func(c *cli.Context) error {
 			setLogLevel(c.String("loglevel"))
@@ -45,10 +53,14 @@ func main() {
 				return err
 			}
 			log.Debug(fmt.Sprintf("Parsed problem: %#v", p))
-			start := time.Now()
-			echo(fmt.Sprintf("Part 1 solution is %v in %s\n", p.Part1(), time.Since(start)), c.String("output"))
-			start = time.Now()
-			echo(fmt.Sprintf("Part 2 solution is %v in %s\n", p.Part2(), time.Since(start)), c.String("output"))
+			if !c.Bool("disable1") {
+				start := time.Now()
+				echo(fmt.Sprintf("Part 1 solution is %v in %s\n", p.Part1(), time.Since(start)), c.String("output"))
+			}
+			if !c.Bool("disable2") {
+				start := time.Now()
+				echo(fmt.Sprintf("Part 2 solution is %v in %s\n", p.Part2(), time.Since(start)), c.String("output"))
+			}
 			return nil
 		},
 	}

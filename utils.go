@@ -32,6 +32,7 @@ func NewProblem(ctx *cli.Context) (p *Problem, err error) {
 		log.Error(fmt.Sprintf("Error opening file %s for reading input: %v", input, err))
 		return
 	}
+	p = new(Problem)
 	strData := string(byteData)
 	for i, l := range strings.Split(strings.TrimSpace(strData), "\n") {
 		log.Debug(fmt.Sprintf("Parsing line %03d: %s", i, l))
@@ -75,7 +76,7 @@ func echo(msg, f string) {
 	fmt.Fprintf(file, msg)
 }
 
-type State struct{
+type State struct {
 	ID int
 }
 
@@ -134,6 +135,6 @@ type Coord struct {
 	X, Y int
 }
 
-func (c *Coord) Manhattan(oc Coord) float64{
-	return math.Abs(float64(oc.X - c.X)) + math.Abs(float64(oc.Y - c.Y))
+func (c *Coord) Manhattan(oc Coord) float64 {
+	return math.Abs(float64(oc.X-c.X)) + math.Abs(float64(oc.Y-c.Y))
 }
