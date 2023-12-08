@@ -74,7 +74,7 @@ def main(argv=None):
             version='%%(prog)s v%s' % __version__)
     arg_parser.add_argument('-y', '--year', type=int, default=2023,
             help='Year of advent of code')
-    arg_parser.add_argument('-m', '--language', choices=['python', 'go'], default='python',
+    arg_parser.add_argument('-m', '--language', choices=['python', 'go'], default='go',
             help='Language skel to be used')
     arg_parser.add_argument('day', type=int,
             help='Day to be fetched and prepared')
