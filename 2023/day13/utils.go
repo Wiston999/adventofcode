@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/texttheater/golang-levenshtein/levenshtein"
 
 	"github.com/oleiade/lane/v2"
 
@@ -38,21 +39,23 @@ const (
 	Horizontal
 )
 
-func FindMirror(data []string) (found bool, index int) {
+func FindMirror(data []string, margin int) (found bool, index int) {
 	for i := 0; i < len(data)-1; i++ {
-		if data[i] == data[i+1] {
+		dist := levenshtein.DistanceForStrings([]rune(data[i]), []rune(data[i+1]), levenshtein.DefaultOptionsWithSub)
+		if dist <= margin {
+			tmpMargin := margin - dist
 			fullReflect := true
 			var head, tail int
-			for head, tail := i, i+1; head >= 0 && tail < len(data); head, tail = head-1, tail+1 {
-				if data[head] != data[tail] {
+			for head, tail = i-1, i+2; head >= 0 && tail < len(data); head, tail = head-1, tail+1 {
+				dist1 := levenshtein.DistanceForStrings([]rune(data[head]), []rune(data[tail]), levenshtein.DefaultOptionsWithSub)
+				if dist1 > tmpMargin {
 					fullReflect = false
 					break
+				} else {
+					tmpMargin -= dist1
 				}
 			}
-			if head != 0 && tail != len(data)-1 {
-				fullReflect = false
-			}
-			if fullReflect {
+			if fullReflect && tmpMargin <= 0 {
 				return true, i + 1
 			}
 		}
@@ -60,11 +63,11 @@ func FindMirror(data []string) (found bool, index int) {
 	return
 }
 
-func (m *Map) FindReflection() (reflection ReflectionType, index int) {
-	if found, index := FindMirror(m.Rows); found {
+func (m *Map) FindReflection(margin int) (reflection ReflectionType, index int) {
+	if found, index := FindMirror(m.Rows, margin); found {
 		return Horizontal, index
 	}
-	if found, index := FindMirror(m.Columns); found {
+	if found, index := FindMirror(m.Columns, margin); found {
 		return Vertical, index
 	}
 	return
@@ -82,7 +85,7 @@ func (m *Map) Flip(i, j int) {
 
 func (p *Problem) Part1() (result int) {
 	for i, m := range p.Patterns {
-		reflection, index := m.FindReflection()
+		reflection, index := m.FindReflection(0)
 		log.Debug(fmt.Sprintf("[%02d] Found reflection %v @ %d", i, reflection, index))
 		if reflection == Vertical {
 			result += index
@@ -95,28 +98,12 @@ func (p *Problem) Part1() (result int) {
 
 func (p *Problem) Part2() (result int) {
 	for i, m := range p.Patterns {
-		for j, r := range m.Rows {
-			flipped := false
-			for k := range r {
-				m.Flip(j, k)
-				reflection, index := m.FindReflection()
-				if index != 0 {
-					log.Debug(fmt.Sprintf("[%02d] Found reflection %v @ %d %v (%d,%d)", i, reflection, index, m, j, k))
-					if reflection == Vertical {
-						result += index
-					} else {
-						result += index * 100
-					}
-					flipped = true
-				}
-				m.Flip(j, k)
-				if flipped {
-					break
-				}
-			}
-			if flipped {
-				break
-			}
+		reflection, index := m.FindReflection(1)
+		log.Debug(fmt.Sprintf("[%02d] Found reflection %v @ %d", i, reflection, index))
+		if reflection == Vertical {
+			result += index
+		} else {
+			result += index * 100
 		}
 	}
 	return
