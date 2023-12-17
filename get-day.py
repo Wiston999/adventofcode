@@ -4,6 +4,7 @@ import logging
 import sys
 import os, os.path
 
+from datetime import datetime
 from urllib import request
 import re
 import subprocess
@@ -72,11 +73,11 @@ def main(argv=None):
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('-v', '--version', action='version',
             version='%%(prog)s v%s' % __version__)
-    arg_parser.add_argument('-y', '--year', type=int, default=2023,
+    arg_parser.add_argument('-y', '--year', type=int, default=datetime.today().year,
             help='Year of advent of code')
     arg_parser.add_argument('-m', '--language', choices=['python', 'go'], default='go',
             help='Language skel to be used')
-    arg_parser.add_argument('day', type=int,
+    arg_parser.add_argument('day', type=int, nargs='?', default=datetime.today().day,
             help='Day to be fetched and prepared')
     arg_parser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout,
             help='Output file, use - for stdout')
