@@ -15,10 +15,7 @@ import (
 )
 
 type Problem struct {
-	Map          map[Coord]Spot
 	Instructions []Instruction
-	MinX, MinY   int
-	MaxX, MaxY   int
 }
 
 type Instruction struct {
@@ -26,8 +23,6 @@ type Instruction struct {
 	Length    int
 	Color     string
 }
-
-type Spot string
 
 type void struct{}
 
@@ -43,94 +38,35 @@ const (
 	D = "D"
 )
 
-func (p *Problem) Print() (result string) {
-	for i := p.MinY; i <= p.MaxY; i++ {
-		for j := p.MinX; j <= p.MaxX; j++ {
-			switch p.Map[Coord{j, i}] {
-			case Edge:
-				result += "#"
-			default:
-				result += "."
-			}
+func (p *Problem) Dig() (result int) {
+	current := Coord{0, 0}
+	for _, order := range p.Instructions {
+		next := current
+		log.Debug(fmt.Sprintf("Instruction %v at %v", order, current))
+		switch order.Direction {
+		case R:
+			next.X += order.Length
+		case L:
+			next.X -= order.Length
+		case U:
+			next.Y -= order.Length
+		case D:
+			next.Y += order.Length
 		}
-		result += "\n"
+		result += ((next.Y*current.X - next.X*current.Y) + order.Length)
+		current = next
 	}
+	result = result/2 + 1
 	return
 }
 
-func (p *Problem) Fill(c Coord) {
-	visited := make(map[Coord]void)
-	pending := lane.NewMinPriorityQueue[Coord, float64]()
-	pending.Push(c, 0)
-	for pending.Size() > 0 {
-		current, _, _ := pending.Pop()
-		visited[current] = void{}
-
-		if v, ok := p.Map[current]; !ok || v == Empty {
-			p.Map[current] = Edge
-
-			lc := []Coord{
-				Coord{current.X + 1, current.Y},
-				Coord{current.X - 1, current.Y},
-				Coord{current.X, current.Y + 1},
-				Coord{current.X, current.Y - 1},
-			}
-			for _, nc := range lc {
-				if _, ok := visited[nc]; !ok {
-					if nc.X >= p.MinX && nc.X <= p.MaxX && nc.Y >= p.MinY && nc.Y <= p.MaxY {
-						pending.Push(nc, 0)
-					}
-				}
-			}
-		}
-	}
-}
-
-func (p *Problem) Dig() {
-	current := Coord{0, 0}
-	for _, order := range p.Instructions {
-		for j := 0; j < order.Length; j++ {
-			switch order.Direction {
-			case R:
-				current.X += 1
-			case L:
-				current.X -= 1
-			case U:
-				current.Y -= 1
-			case D:
-				current.Y += 1
-			}
-			p.Map[current] = Edge
-		}
-		if current.X > p.MaxX {
-			p.MaxX = current.X
-		}
-		if current.Y > p.MaxY {
-			p.MaxY = current.Y
-		}
-		if current.X < p.MinX {
-			p.MinX = current.X
-		}
-		if current.Y < p.MinY {
-			p.MinY = current.Y
-		}
-	}
-}
-
 func (p *Problem) Part1() (result int) {
-	p.Dig()
-	// Solution guessing
-	p.Fill(Coord{1, 1})
-	for _, v := range p.Map {
-		if v == Edge {
-			result += 1
-		}
-	}
+	result = p.Dig()
 	return
 }
 
 func (p *Problem) Part2() (result int) {
-	np := Problem{Map: make(map[Coord]Spot)}
+	np := Problem{}
 	for _, i := range p.Instructions {
 		ni := Instruction{}
 		tmp, _ := strconv.ParseInt(string(i.Color[:5]), 16, 64)
@@ -149,16 +85,7 @@ func (p *Problem) Part2() (result int) {
 		np.Instructions = append(np.Instructions, ni)
 	}
 
-	np.Dig()
-	result = (np.MaxX - np.MinX) * (np.MaxY - np.MinY)
-	log.Debug(fmt.Sprintf("Total possible area %d", result))
-	// Fill outside area
-	np.Fill(Coord{np.MinX, np.MaxY})
-	for _, v := range p.Map {
-		if v == Edge {
-			result -= 1
-		}
-	}
+	result = np.Dig()
 
 	return
 }
@@ -171,7 +98,6 @@ func NewProblem(ctx *cli.Context) (p *Problem, err error) {
 		return
 	}
 	p = new(Problem)
-	p.Map = make(map[Coord]Spot)
 	strData := string(byteData)
 	for i, l := range strings.Split(strings.TrimSpace(strData), "\n") {
 		log.Debug(fmt.Sprintf("Parsing line %03d: %s", i, l))
