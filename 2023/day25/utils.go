@@ -127,24 +127,18 @@ func (p *Problem) Part1() (result int) {
 		break
 	}
 	log.Info(fmt.Sprintf("Read %d vertices and %d edges", len(p.Vertices), len(p.Edges)))
-	common := make([]map[string]void, 0)
 	for k, v := range p.Vertices {
 		if src.Name != k {
 			paths, used := p.CountPaths(src, v)
 			if paths <= 3 {
 				_, vertices := p.BFS(v, nil, used)
-				common = append(common, vertices)
+				result = len(vertices) * (len(p.Vertices) - len(vertices))
+				break
 			}
 			log.Debug(fmt.Sprintf("%s -> %s: %v\n", src.Name, k, paths))
 		}
 	}
-	disconnected := make(map[string]void)
-	for _, used := range common {
-		for k := range used {
-			disconnected[k] = null
-		}
-	}
-	return len(disconnected) * (len(p.Vertices) - len(disconnected))
+	return
 }
 
 func (p *Problem) Part2() (result int) {
