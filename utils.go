@@ -14,6 +14,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+type void struct{}
+
+var null void
+
 type Problem struct {
 }
 
