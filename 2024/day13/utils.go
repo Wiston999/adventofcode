@@ -53,15 +53,6 @@ func (c *Claw) SmartScore() (result int, found bool) {
 	return
 }
 
-func GCD(a, b int) (int, int, int) {
-	if a == 0 {
-		return b, 0, 1
-	} else {
-		gcd, x, y := GCD(b%a, a)
-		return gcd, y - (b/a)*x, x
-	}
-}
-
 type Problem struct {
 	Claws []Claw
 }
