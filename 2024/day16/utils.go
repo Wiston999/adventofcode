@@ -20,91 +20,96 @@ var null void
 
 type Problem struct {
 	Map                 map[Coord]string
+	MaxX, MaxY          int
 	Current, Start, End Coord
-	Shortest            []State
-	Best                int
+	Dist                map[State]int
+	Prev                map[State]State
 }
 
-func (p *Problem) ShortestPath(start, end State) (path []State, score float64) {
-	pathFinder := PathFinder{
-		P:     *p,
-		Start: start,
-		Goal: func(s State) bool {
-			return s.Current.X == end.Current.X && s.Current.Y == end.Current.Y
-		},
-		Cost: func(n, c State) float64 {
-			if n.Direction == c.Direction {
-				return 1.0
-			} else {
-				return 1000.0
+func (p *Problem) Dijkstra() {
+	p.Dist = make(map[State]int)
+	p.Prev = make(map[State]State)
+	pending := lane.NewMinPriorityQueue[State, float64]()
+	pending.Push(State{p.Start, East}, 0)
+	for k, v := range p.Map {
+		if v != "#" {
+			for i := North; i <= West; i += 1 {
+				p.Dist[State{k, Dir(i)}] = 10000000000
+				p.Prev[State{k, Dir(i)}] = State{}
+				pending.Push(State{k, Dir(i)}, 10000000000)
 			}
-		},
-		Heuristic: func(s State) float64 {
-			rotateCost := 0.0
-			switch s.Direction {
-			case South:
-				rotateCost = 2
-			case East:
-				rotateCost = 1
-			case West:
-				rotateCost = 1
-			}
-			return s.Current.Manhattan(p.End) + 1000*rotateCost
-		},
-	}
-	path, score = pathFinder.Search()
-	path = append(path, start)
-	return
-}
-
-func (p *Problem) PathScore(path []State) (result int) {
-	current := path[0]
-	for i := 1; i < len(path); i += 1 {
-		if current.Direction != path[i].Direction {
-			result += 1000
-		} else {
-			result += 1
 		}
-		current = path[i]
 	}
-	return
+	p.Dist[State{p.Start, East}] = 0
+
+	for pending.Size() > 0 {
+		vertex, _, _ := pending.Pop()
+		for _, n := range vertex.Neighbours(*p) {
+			cost := 1
+			if n.Direction != vertex.Direction {
+				cost = 1000
+			}
+			alt := p.Dist[vertex] + cost
+			if alt < p.Dist[n] {
+				p.Prev[n] = vertex
+				p.Dist[n] = alt
+				pending.Push(n, float64(alt))
+			}
+		}
+	}
 }
 
 func (p *Problem) Part1() (result int) {
-	path, score := p.ShortestPath(State{p.Start, East}, State{p.End, North})
-	log.Debug(fmt.Sprintf("Found path to %v [%02f]: %v", p.End, score, path))
-	p.Shortest = path
-	p.Best = int(score)
-	result = p.Best
+	result = p.Dist[State{p.End, North}]
+	for i := North; i <= West; i += 1 {
+		if p.Dist[State{p.End, Dir(i)}] < result {
+			result = p.Dist[State{p.End, Dir(i)}]
+		}
+	}
 	return
 }
 
 func (p *Problem) Part2() (result int) {
-	if len(p.Shortest) == 0 {
-		log.Fatal("First part must be run to get best path")
+	best := p.Dist[State{p.End, North}]
+	var bestDirection Dir
+	for i := North; i <= West; i += 1 {
+		if p.Dist[State{p.End, Dir(i)}] < best {
+			best = p.Dist[State{p.End, Dir(i)}]
+			bestDirection = Dir(i)
+		}
 	}
 	pending := lane.NewMinPriorityQueue[State, float64]()
-	pending.Push(State{p.Start, East}, 0)
+	pending.Push(State{p.End, bestDirection}, 0)
 	visited := make(map[State]void)
-	solution := make(map[Coord]void)
-
+	unique := make(map[Coord]void)
+	unique[p.Start] = null
+	unique[p.End] = null
 	for pending.Size() > 0 {
 		current, _, _ := pending.Pop()
-		_, toCurrent := p.ShortestPath(State{p.Start, East}, current)
-		_, toEnd := p.ShortestPath(current, State{p.End, North})
-		// log.Debug(fmt.Sprintf("From %v: %f + %f <= %d", current, toCurrent, toEnd, p.Best))
-		if int(toCurrent+toEnd) == p.Best {
-			solution[current.Current] = null
+		if _, ok := visited[current]; ok {
+			continue
 		}
-		for _, n := range current.Neighbours(*p) {
-			if _, ok := visited[n]; !ok {
+		nullState := State{}
+		if p.Prev[current] == nullState {
+			continue
+		}
+		visited[current] = null
+		unique[current.Current] = null
+		pending.Push(p.Prev[current], 0)
+		log.Debug(fmt.Sprintf("%v: %d", current, p.Dist[current]))
+		for _, n := range current.neighbours(*p, true) {
+			log.Debug(fmt.Sprintf("%v %v: %d %d", current, n, p.Dist[current], p.Dist[n]))
+			cost := 1
+			if n.Direction != current.Direction {
+				cost = 1000
+			}
+			if p.Dist[n]+cost == p.Dist[current] {
+				log.Debug(fmt.Sprintf("Going to visit extra neighbour: %v", n))
 				pending.Push(n, 0)
-				visited[n] = null
 			}
 		}
 	}
-	result = len(solution)
-	log.Debug(fmt.Sprintf("%v", solution))
+	result = len(unique)
 	return
 }
 
@@ -130,8 +135,15 @@ func NewProblem(ctx *cli.Context) (p *Problem, err error) {
 			} else {
 				p.Map[Coord{i, j}] = c
 			}
+			if j > p.MaxY {
+				p.MaxY = j
+			}
+		}
+		if i > p.MaxX {
+			p.MaxX = i
 		}
 	}
+	p.Dijkstra()
 	return
 }
 
@@ -185,30 +197,36 @@ const (
 	West
 )
 
-func (s *State) Neighbours(p Problem) (ns []State) {
+func (s *State) neighbours(p Problem, reverse bool) (ns []State) {
 	candidates := []State{}
-	switch s.Direction {
+	var straightCandidate State
+	direction := s.Direction
+	if reverse {
+		direction = (s.Direction + 2) % 4
+	}
+	switch direction {
 	case North:
-		candidates = append(candidates, State{
+		straightCandidate = State{
 			Coord{s.Current.X - 1, s.Current.Y},
 			s.Direction,
-		})
+		}
 	case South:
-		candidates = append(candidates, State{
+		straightCandidate = State{
 			Coord{s.Current.X + 1, s.Current.Y},
 			s.Direction,
-		})
+		}
 	case East:
-		candidates = append(candidates, State{
-			Coord{s.Current.X, s.Current.Y - 1},
-			s.Direction,
-		})
-	case West:
-		candidates = append(candidates, State{
+		straightCandidate = State{
 			Coord{s.Current.X, s.Current.Y + 1},
 			s.Direction,
-		})
+		}
+	case West:
+		straightCandidate = State{
+			Coord{s.Current.X, s.Current.Y - 1},
+			s.Direction,
+		}
 	}
+	candidates = append(candidates, straightCandidate)
 	candidates = append(candidates, State{
 		Coord{s.Current.X, s.Current.Y},
 		(s.Direction + 1) % 4,
@@ -223,6 +241,10 @@ func (s *State) Neighbours(p Problem) (ns []State) {
 		}
 	}
 	return
+}
+
+func (s *State) Neighbours(p Problem) (ns []State) {
+	return s.neighbours(p, false)
 }
 
 type PathFinder struct {
