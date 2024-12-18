@@ -39,18 +39,56 @@ func (p *Problem) Print() (result string) {
 	return
 }
 
-func (p *Problem) CanPush(left, right Coord, m string) (result bool) {
-	nX := 1
-	if m == "^" {
-		nX = -1
+func (p *Problem) CanPush(current Coord, m string) (result bool) {
+	result = true
+	next := current
+	switch m {
+	case "<":
+		next.Y -= 1
+	case ">":
+		next.Y += 1
+	case "v":
+		next.X += 1
+	case "^":
+		next.X -= 1
 	}
-	vL := p.Warehouse[Coord{left.X + nX, left.Y}]
-	vR := p.Warehouse[Coord{right.X + nX, right.Y}]
-	result = vL == "." && vR == "."
+	switch p.Warehouse[next] {
+	case "#":
+		return false
+	case ".":
+		return true
+	case "O":
+		result = result && p.CanPush(next, m)
+	case "[":
+		switch m {
+		case ">":
+			result = result && p.CanPush(Coord{next.X, next.Y + 1}, m)
+			// Impossible case, but left here
+		// case "<":
+		// 	result = result && p.CanPush(Coord{next.X, next.Y - 1}, m)
+		case "^", "v":
+			result = result && p.CanPush(next, m) && p.CanPush(Coord{next.X, next.Y + 1}, m)
+		}
+	case "]":
+		switch m {
+		// Impossible case, but left here
+		// case ">":
+		// 	result = result && p.CanPush(Coord{next.X, next.Y + 1}, m)
+		case "<":
+			result = result && p.CanPush(Coord{next.X, next.Y - 1}, m)
+		case "^", "v":
+			result = result && p.CanPush(next, m) && p.CanPush(Coord{next.X, next.Y - 1}, m)
+		}
+	}
 	return
 }
 
 func (p *Problem) Push(start Coord, m string, doubled bool) Coord {
+	if !p.CanPush(start, m) {
+		log.Debug(fmt.Sprintf("%v can't be pushed %s", start, m))
+		return start
+	}
+	log.Debug(fmt.Sprintf("%v can be pushed %s", start, m))
 	next := start
 	switch m {
 	case "<":
@@ -86,27 +124,19 @@ func (p *Problem) Push(start Coord, m string, doubled bool) Coord {
 			p.Warehouse[start] = "."
 			return next
 		case "[":
-			right := p.Push(next, m, doubled)
-			left := p.Push(Coord{next.X, next.Y + 1}, m, doubled)
-			log.Debug(fmt.Sprintf("Pushing right edge of box at %v, %v %v S:%v\n%s", next, right, left, start, p.Print()))
-			if p.Warehouse[next] == "." && p.Warehouse[Coord{next.X, next.Y + 1}] == "." {
-				p.Warehouse[next] = p.Warehouse[start]
-				p.Warehouse[start] = "."
-				// p.Warehouse[Coord{start.X, start.Y + 1}] = "."
-				log.Debug(fmt.Sprintf("Pushed right edge of box at %v, %v %v S:%v\n%s", next, right, left, start, p.Print()))
-				return next
-			}
+			p.Push(next, m, doubled)
+			p.Push(Coord{next.X, next.Y + 1}, m, doubled)
+			p.Warehouse[next] = p.Warehouse[start]
+			p.Warehouse[Coord{next.X, next.Y + 1}] = "."
+			p.Warehouse[start] = "."
+			return next
 		case "]":
-			right := p.Push(Coord{next.X, next.Y - 1}, m, doubled)
-			left := p.Push(next, m, doubled)
-			log.Debug(fmt.Sprintf("Pushing left edge of box at %v, %v %v S:%v\n%s", next, right, left, start, p.Print()))
-			if p.Warehouse[next] == "." && p.Warehouse[Coord{next.X, next.Y - 1}] == "." {
-				p.Warehouse[next] = p.Warehouse[start]
-				p.Warehouse[start] = "."
-				// p.Warehouse[Coord{start.X, start.Y - 1}] = "."
-				log.Debug(fmt.Sprintf("Pushed left edge of box at %v, %v %v S:%v\n%s", next, right, left, start, p.Print()))
-				return next
-			}
+			p.Push(next, m, doubled)
+			p.Push(Coord{next.X, next.Y - 1}, m, doubled)
+			p.Warehouse[next] = p.Warehouse[start]
+			p.Warehouse[Coord{next.X, next.Y - 1}] = "."
+			p.Warehouse[start] = "."
+			return next
 		}
 	}
 	return start
@@ -123,6 +153,7 @@ func (p *Problem) CopyWarehouse() (result map[Coord]string) {
 func (p *Problem) Part1() (result int) {
 	p.Robot = p.StartRobot
 	p.Warehouse = p.CopyWarehouse()
+	fmt.Println(p.Print())
 	for _, m := range p.Movements {
 		p.Robot = p.Push(p.Robot, m, false)
 	}
@@ -133,7 +164,6 @@ func (p *Problem) Part1() (result int) {
 			}
 		}
 	}
-	fmt.Println(p.Print())
 	return
 }
 
@@ -157,9 +187,9 @@ func (p *Problem) Part2() (result int) {
 	}
 	p.MaxY *= 2 + 1
 	p.Robot.Y *= 2
+	fmt.Println(p.Print())
 	for _, m := range p.Movements {
 		p.Robot = p.Push(p.Robot, m, true)
-		log.Debug(fmt.Sprintf("Movement %s %v:\n%s", m, p.Robot, p.Print()))
 	}
 	fmt.Println(p.Print())
 	for i := 0; i <= p.MaxX; i += 1 {
