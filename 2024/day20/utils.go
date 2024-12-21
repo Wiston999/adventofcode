@@ -24,22 +24,6 @@ type Problem struct {
 	Start, End Coord
 }
 
-func (p *Problem) Print(path, cheats map[Coord]void) (result string) {
-	for i := 0; i <= p.MaxX; i += 1 {
-		for j := 0; j <= p.MaxY; j += 1 {
-			if _, ok := path[Coord{i, j}]; ok {
-				result += "O"
-			} else if _, ok := cheats[Coord{i, j}]; ok {
-				result += "X"
-			} else {
-				result += p.Map[Coord{i, j}]
-			}
-		}
-		result += "\n"
-	}
-	return
-}
-
 func (p *Problem) FindPath() (result int, path []State) {
 	pathFinder := PathFinder{
 		P:     *p,
@@ -65,39 +49,29 @@ type Cheat struct {
 }
 
 func (p *Problem) Part1() (result int) {
-	cheats := make(map[Coord]void)
-
 	_, path := p.FindPath()
-	pathMap := make(map[Coord]void)
-	log.Debug(fmt.Sprintf("Track length: %d", len(pathMap)))
 	for i, s := range path {
 		c := s.C
-		pathMap[c] = null
-		for j := i + 101; j < len(path); j += 1 {
-			if c.X == path[j].C.X {
-				if c.Y == path[j].C.Y-2 && p.Map[Coord{c.X, c.Y + 1}] == "#" {
-					cheats[Coord{c.X, c.Y + 1}] = null
-				}
-				if c.Y == path[j].C.Y+2 && p.Map[Coord{c.X, c.Y - 1}] == "#" {
-					cheats[Coord{c.X, c.Y - 1}] = null
-				}
-			}
-			if c.Y == path[j].C.Y {
-				if c.X == path[j].C.X-2 && p.Map[Coord{c.X + 1, c.Y}] == "#" {
-					cheats[Coord{c.X + 1, c.Y}] = null
-				}
-				if c.X == path[j].C.X+2 && p.Map[Coord{c.X - 1, c.Y}] == "#" {
-					cheats[Coord{c.X - 1, c.Y}] = null
-				}
+		for j := i + 100; j < len(path); j += 1 {
+			if d := c.Manhattan(path[j].C); d == 2 && (j-i) >= 100+2 {
+				result += 1
 			}
 		}
 	}
-	result = len(cheats)
 	log.Info(fmt.Sprintf("Found %d cheats that improves 100 picoseconds", result))
 	return
 }
 
 func (p *Problem) Part2() (result int) {
+	_, path := p.FindPath()
+	for i, s := range path {
+		c := s.C
+		for j := i + 100; j < len(path); j += 1 {
+			if d := c.Manhattan(path[j].C); d <= 20 && (j-i) >= 100+int(d) {
+				result += 1
+			}
+		}
+	}
 	return
 }
 
@@ -182,7 +156,7 @@ func (s *State) Neighbours(p Problem) (ns []State) {
 		{Coord{s.C.X, s.C.Y - 1}},
 	}
 	for _, c := range candidates {
-		if p.Map[c.C] != "#" {
+		if p.Map[c.C] != "#" && c.C.X >= 0 && c.C.X <= p.MaxX && c.C.Y >= 0 && c.C.Y <= p.MaxY {
 			ns = append(ns, c)
 		}
 	}
