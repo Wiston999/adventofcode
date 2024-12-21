@@ -24,7 +24,23 @@ type Problem struct {
 	Start, End Coord
 }
 
-func (p *Problem) FindPath() (result int) {
+func (p *Problem) Print(path, cheats map[Coord]void) (result string) {
+	for i := 0; i <= p.MaxX; i += 1 {
+		for j := 0; j <= p.MaxY; j += 1 {
+			if _, ok := path[Coord{i, j}]; ok {
+				result += "O"
+			} else if _, ok := cheats[Coord{i, j}]; ok {
+				result += "X"
+			} else {
+				result += p.Map[Coord{i, j}]
+			}
+		}
+		result += "\n"
+	}
+	return
+}
+
+func (p *Problem) FindPath() (result int, path []State) {
 	pathFinder := PathFinder{
 		P:     *p,
 		Start: State{p.Start},
@@ -38,7 +54,8 @@ func (p *Problem) FindPath() (result int) {
 			return s.C.Manhattan(p.End)
 		},
 	}
-	_, score := pathFinder.Search()
+	path, score := pathFinder.Search()
+	path = append(path, State{p.Start})
 	result = int(score)
 	return
 }
@@ -48,31 +65,35 @@ type Cheat struct {
 }
 
 func (p *Problem) Part1() (result int) {
-	cheats := make(map[Cheat]int)
+	cheats := make(map[Coord]void)
 
-	base := p.FindPath()
-	for c, t := range p.Map {
-		if t == "#" {
-			if p.Map[Coord{c.X - 1, c.Y}] == "." && p.Map[Coord{c.X + 1, c.Y}] == "." {
-				p.Map[c] = "."
-				cheats[Cheat{c, Coord{c.X + 1, c.Y}}] = base - p.FindPath()
-				p.Map[c] = "#"
+	_, path := p.FindPath()
+	pathMap := make(map[Coord]void)
+	log.Debug(fmt.Sprintf("Track length: %d", len(pathMap)))
+	for i, s := range path {
+		c := s.C
+		pathMap[c] = null
+		for j := i + 101; j < len(path); j += 1 {
+			if c.X == path[j].C.X {
+				if c.Y == path[j].C.Y-2 && p.Map[Coord{c.X, c.Y + 1}] == "#" {
+					cheats[Coord{c.X, c.Y + 1}] = null
+				}
+				if c.Y == path[j].C.Y+2 && p.Map[Coord{c.X, c.Y - 1}] == "#" {
+					cheats[Coord{c.X, c.Y - 1}] = null
+				}
 			}
-			if p.Map[Coord{c.X, c.Y + 1}] == "." && p.Map[Coord{c.X, c.Y - 1}] == "." {
-				p.Map[c] = "."
-				cheats[Cheat{c, Coord{c.X, c.Y + 1}}] = base - p.FindPath()
-				p.Map[c] = "#"
+			if c.Y == path[j].C.Y {
+				if c.X == path[j].C.X-2 && p.Map[Coord{c.X + 1, c.Y}] == "#" {
+					cheats[Coord{c.X + 1, c.Y}] = null
+				}
+				if c.X == path[j].C.X+2 && p.Map[Coord{c.X - 1, c.Y}] == "#" {
+					cheats[Coord{c.X - 1, c.Y}] = null
+				}
 			}
 		}
 	}
-
-	for c, v := range cheats {
-		log.Debug(fmt.Sprintf("Cheat %v saved %d", c, v))
-		if v >= 100 {
-			result += 1
-		}
-	}
-	log.Info(fmt.Sprintf("Found %d cheats and %d improves 100 picoseconds", len(cheats), result))
+	result = len(cheats)
+	log.Info(fmt.Sprintf("Found %d cheats that improves 100 picoseconds", result))
 	return
 }
 
